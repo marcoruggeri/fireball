@@ -19,7 +19,8 @@ import {
     parselQuery,
     clientParselQuery,
     listedParcelQuery,
-    getParcelHistoricalPricesQuery
+    getParcelHistoricalPricesQuery,
+    wearableSetsQuery
 } from './common/queries';
 
 const baseUrl = 'https://api.thegraph.com/subgraphs/name/aavegotchi/aavegotchi-core-matic';
@@ -394,5 +395,14 @@ export default {
         });
 
         return queries;
+    },
+
+    async getAllWearableSets() {
+        const { 
+            data: {
+                wearableSets
+            } 
+        } = await this.getData(wearableSetsQuery())
+        return wearableSets
     }
 }

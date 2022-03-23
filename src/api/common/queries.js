@@ -314,3 +314,15 @@ export const raffleWinsQuery = (address) => {
       }
     }`
 };
+
+export const wearableSetsQuery = () => {
+  return `{
+    wearableSets {
+      id
+      name
+      allowedCollaterals
+      wearableIds
+      traitBonuses
+    }
+  }`
+}

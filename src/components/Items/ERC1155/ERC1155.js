@@ -31,25 +31,46 @@ export default function ERC1155({ children, item }) {
 
     useEffect(() => {
         let controller = new AbortController();
-
+        // !start of the merge
         // last sold
-        thegraph.getErc1155Price(item.id, true, item.category, 'timeLastPurchased', 'desc').then((response) => {
-            if (!controller.signal.aborted) {
-                setLast(response);
+        // thegraph.getErc1155Price(item.id, true, item.category, 'timeLastPurchased', 'desc').then((response) => {
+        //     if (!controller.signal.aborted) {
+        //         setLast(response);
 
-                if (response?.lastSale) {
-                    let date = new Date(response?.lastSale * 1000).toJSON()
-                    setLastDate(date);
+        //         if (response?.lastSale) {
+        //             let date = new Date(response?.lastSale * 1000).toJSON()
+        //             setLastDate(date);
+        //         }
+        //     }
+        // });
+
+        // // current
+        // thegraph.getErc1155Price(item.id, false, item.category, 'priceInWei', 'asc').then((response) => {
+        //     if (!controller.signal.aborted) {
+        //         setCurrent(response);
+        //     }
+        // });
+        if (!item.priceInGhst) {
+            // last sold
+            thegraph.getErc1155Price(item.id, true, item.category, 'timeLastPurchased', 'desc').then((response) => {
+                if(!controller.signal.aborted) {
+                    setLast(response);
+
+                    if(response?.lastSale) {
+                        let date = new Date(response?.lastSale * 1000).toJSON()
+                        setLastDate(date);
+                    }
                 }
-            }
-        });
+            });
 
-        // current
-        thegraph.getErc1155Price(item.id, false, item.category, 'priceInWei', 'asc').then((response) => {
-            if (!controller.signal.aborted) {
-                setCurrent(response);
-            }
-        });
+            // current
+            thegraph.getErc1155Price(item.id, false, item.category, 'priceInWei', 'asc').then((response) => {
+                if(!controller.signal.aborted) {
+                    setCurrent(response);
+                }
+            });
+        }
+        // !end of the merge
 
         return () => controller?.abort(); // cleanup on destroy
     }, [item]);
@@ -59,7 +80,7 @@ export default function ERC1155({ children, item }) {
 
             {(item.balance || item.priceInWei) ? (
                 <div className={classes.labels}>
-                    {last && current ? (
+                    {(item.priceInGhst || (last && current)) ? (
                         <Tooltip title='Total value' classes={{ tooltip: classes.customTooltip }} placement='top' followCursor>
                             <div
                                 className={
@@ -72,8 +93,18 @@ export default function ERC1155({ children, item }) {
                             >
                                 <Typography variant='subtitle2'>
                                     {
-                                        last.price === 0 && !item.priceInWei ? '???' :
-                                        commonUtils.formatPrice((last.price && item.balance) ? (last.price * item.balance) : ethersApi.fromWei(item.priceInWei))
+                                        // !start of the merge
+                                        // last.price === 0 && !item.priceInWei ? '???' :
+                                        // commonUtils.formatPrice((last.price && item.balance) ? (last.price * item.balance) : ethersApi.fromWei(item.priceInWei))
+                                        (item.priceInGhst && item.priceInGhst === Infinity
+                                            ? '???'
+                                            : item.priceInGhst) ||
+                                        (last.price === 0 && !item.priceInWei
+                                            ? '???'
+                                            : commonUtils.formatPrice((last.price && item.balance)
+                                                ? (last.price * item.balance)
+                                                : ethersApi.fromWei(item.priceInWei)))
+                                        // !end of the merge
                                     }
                                 </Typography>
                                 <img src={ghstIcon} width='18' alt='GHST Token Icon' />
@@ -144,8 +175,9 @@ export default function ERC1155({ children, item }) {
 
             {children}
 
-            <div className={classes.prices}>
-                {current && last ? (
+            {/* // !start of the merge */}
+             {/* <div className={classes.prices}>
+                 {current && last ? (
                     <Tooltip
                         title={
                             <React.Fragment>
@@ -194,32 +226,107 @@ export default function ERC1155({ children, item }) {
                                             <Typography className={classes.lastPriceUp} variant='subtitle2'>
                                                 {commonUtils.formatPrice(current.price)}
                                             </Typography>
-                                        </>
+                                        </> */}
+            {!item.priceInGhst && ( // Hide below for wearable sets
+                <div className={classes.prices}>
+                    {current && last ? (
+                        <Tooltip
+                            title={
+                                <React.Fragment>
+                                    {last.price === 0 ? (
+                                        <Box color='error.main'>
+                                            <Typography variant='caption'>No sales</Typography>
+                                        </Box>
+            // !end of the merge
                                     ) : (
-                                        <>
-                                            <KeyboardArrowDownIcon color='warning' fontSize='inherit' />
-                                            <Typography className={classes.lastPriceDown} variant='subtitle2'>
+                                        <Typography variant='caption'>
+                                            Sold for <Link
+                                                href={`https://www.aavegotchi.com/baazaar/erc1155/${last.listing}`}
+                                                target='_blank'
+                                                underline='none'
+                                                className={classes.soldOutLink}
+                                            >
+                                                {commonUtils.formatPrice(last.price)}
+                                            </Link> [{DateTime.fromISO(lastDate).toRelative()}]
+                                        </Typography>
+                                    )}
+                                </React.Fragment>
+                            }
+                            placement='top'
+                            classes={{ tooltip: classes.customTooltip }}
+                        >
+                            <div>
+                                {current.price === 0 ? (
+                                    <Typography
+                                        variant='subtitle2'
+                                        className={classNames(classes.label, classes.labelTotal, classes.labelListing, 'baazarPrice')}>
+                                        No listings
+                                    </Typography>
+                                ) : (
+                                    <Link
+                                        href={`https://www.aavegotchi.com/baazaar/erc1155/${current.listing}`}
+                                        target='_blank'
+                                        underline='none'
+                                        className={classNames(classes.label, classes.labelTotal, 'baazarPrice')}
+                                    >
+                                        {current.price === last.price ? (
+                                            <Typography className={classes.lastPrice} variant='subtitle2'>
                                                 {commonUtils.formatPrice(current.price)}
                                             </Typography>
-                                        </>
-                                    )}
-                                    <img src={ghstIcon} width='18' alt='GHST Token Icon' />
-                                </Link>
-                            )}
-                        </div>
-                    </Tooltip>
-                ) : (
-                    <ContentLoader
-                        speed={2}
-                        viewBox='0 0 70 27'
-                        backgroundColor={alpha(theme.palette.secondary.dark, .5)}
-                        foregroundColor={alpha(theme.palette.secondary.main, .5)}
-                        className={classes.priceLoader}
-                    >
-                        <rect x='0' y='0' width='70' height='27' />
-                    </ContentLoader>
-                )}
-            </div>
+            // !start of the merge
+            //                             </>
+            //                         )}
+            //                         <img src={ghstIcon} width='18' alt='GHST Token Icon' />
+            //                     </Link>
+            //                 )}
+            //             </div>
+            //         </Tooltip>
+            //     ) : (
+            //         <ContentLoader
+            //             speed={2}
+            //             viewBox='0 0 70 27'
+            //             backgroundColor={alpha(theme.palette.secondary.dark, .5)}
+            //             foregroundColor={alpha(theme.palette.secondary.main, .5)}
+            //             className={classes.priceLoader}
+            //         >
+            //             <rect x='0' y='0' width='70' height='27' />
+            //         </ContentLoader>
+            //     )}
+            // </div>
+                                        ) : current.price > last.price ? (
+                                            <>
+                                                <KeyboardArrowUpIcon color='success' fontSize='inherit' />
+                                                <Typography className={classes.lastPriceUp} variant='subtitle2'>
+                                                    {commonUtils.formatPrice(current.price)}
+                                                </Typography>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <KeyboardArrowDownIcon color='warning' fontSize='inherit' />
+                                                <Typography className={classes.lastPriceDown} variant='subtitle2'>
+                                                    {commonUtils.formatPrice(current.price)}
+                                                </Typography>
+                                            </>
+                                        )}
+                                        <img src={ghstIcon} width='18' alt='GHST Token Icon' />
+                                    </Link>
+                                )}
+                            </div>
+                        </Tooltip>
+                    ) : (
+                        <ContentLoader
+                            speed={2}
+                            viewBox='0 0 70 27'
+                            backgroundColor={alpha(theme.palette.secondary.dark, .5)}
+                            foregroundColor={alpha(theme.palette.secondary.main, .5)}
+                            className={classes.priceLoader}
+                        >
+                            <rect x='0' y='0' width='70' height='27' />
+                        </ContentLoader>
+                    )}
+                </div>
+            )}
+        {/* // !end of the merge */}
         </div>
     )
 }

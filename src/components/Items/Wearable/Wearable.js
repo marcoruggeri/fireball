@@ -25,7 +25,8 @@ export default function Wearable({ wearable, raffleChances, tooltip }) {
             holders: wearable.holders,
             slot: slot,
             tooltip: tooltip,
-            priceInWei: wearable.priceInWei,
+            priceInGhst: wearable.priceInGhst, // For Wearable Sets
+            priceInWei: wearable.priceInWei, // For Market -> Activity
             quantity: wearable.quantity
         }}>
 
